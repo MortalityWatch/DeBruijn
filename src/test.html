@@ -1,0 +1,92 @@
+<!doctype html>
+<html>
+  <head>
+    <title>Vis Network Graph Visualization</title>
+    <style>
+      #network {
+        width: 800px;
+        height: 600px;
+        border: 1px solid black;
+      }
+    </style>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/vis-network/9.1.9/standalone/umd/vis-network.min.js"></script>
+  </head>
+
+  <body>
+    <div id="network"></div>
+    <script>
+      // Create nodes and edges
+      const nodes = new vis.DataSet([
+        { id: 'A', label: 'A' },
+        { id: 'B', label: 'B' },
+        { id: 'C', label: 'C' },
+        { id: 'D', label: 'D' },
+        { id: 'E', label: 'E' }
+      ])
+
+      const edges = new vis.DataSet([
+        { from: 'A', to: 'B', arrows: 'to' },
+        { from: 'A', to: 'B', arrows: 'to' }, // Multiple edge
+        { from: 'B', to: 'C', arrows: 'to' },
+        { from: 'C', to: 'A', arrows: 'to' }, // Creates a loop
+        { from: 'A', to: 'D', arrows: 'to' },
+        { from: 'D', to: 'E', arrows: 'to' }
+      ])
+
+      // Create a network
+      const container = document.getElementById('network')
+      const data = { nodes, edges }
+      const options = {
+        edges: {
+          arrows: {
+            to: { enabled: true, scaleFactor: 1 }
+          }
+        }
+      }
+      const network = new vis.Network(container, data, options)
+
+      // Function to find all contigs
+      const findAllContigs = (nodes, edges) => {
+        const adjList = {}
+        nodes.forEach((node) => (adjList[node.id] = []))
+        edges.forEach((edge) => adjList[edge.from].push({ to: edge.to, id: edge.id }))
+
+        const contigs = new Set()
+
+        // Recursive function to extend path
+        const extendPath = (node, path, visitedEdges) => {
+          path.push(node)
+
+          const outEdges = adjList[node]
+          if (outEdges.length === 0) {
+            if (path.length > 1) contigs.add(path.join(''))
+            return
+          }
+
+          outEdges.forEach((edge) => {
+            if (path.length > 1) contigs.add(path.join(''))
+            if (visitedEdges.has(edge.id)) {
+              return
+            } else {
+              const targetNode = edge.to
+              visitedEdges.add(edge.id)
+              extendPath(targetNode, path.slice(), new Set(visitedEdges))
+            }
+          })
+        }
+
+        // Find all nodes with outgoing edges and generate contigs
+        nodes.forEach((node) => {
+          if (!adjList[node.id].length) return
+          extendPath(node.id, [], new Set())
+        })
+
+        return Array.from(contigs).sort((a, b) => b.length - a.length)
+      }
+
+      // Find and print all contigs
+      const contigs = findAllContigs(nodes.get(), edges.get())
+      console.log(contigs) // Output the contigs found, including cycles
+    </script>
+  </body>
+</html>
