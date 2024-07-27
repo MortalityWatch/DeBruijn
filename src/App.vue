@@ -237,6 +237,12 @@ onMounted(() => parseInput())
           In summary, this tool provides a powerful way to visualize and understand the genome
           assembly process and its potential issues using the De Bruijn graph algorithm.
         </p>
+
+        <h2>Open Source</h2>
+        <p>
+          The full code of this tool can be found at:
+          <a target="_blank" href="https://github.com/MortalityWatch/DeBruijn">Source Code</a>
+        </p>
       </template>
     </Card>
   </div>
