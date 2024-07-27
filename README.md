@@ -1,6 +1,8 @@
-# de-bruijn-contigs
+# DeBruijn.Mortality.Watch
 
-This template should help get you started developing with Vue 3 in Vite.
+This tool visualizes short read genome assembly using the De Bruijn graph algorithm. It showcases the theory behind the complex process of in-silico genome assembly, making it more accessible and understandable. This method was the primary method, that was used during the creation of the SARS-CoV-2 reference genome.
+
+Hosted at https://DeBruijn.Mortality.Watch
 
 ## Recommended IDE Setup
 
