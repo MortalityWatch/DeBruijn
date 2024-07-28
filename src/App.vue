@@ -107,6 +107,13 @@ onMounted(() => parseInput())
             />
           </div>
           <NumberSlider title="k-mer size:" v-model:n="k" :min="2" :max="k_max" />
+          <a
+            v-if="inputType === 'genome'"
+            class="dl"
+            style="cursor: pointer"
+            @click="downloadFastaFile([genome], 'genome.fa')"
+            >💾 Download (FASTA)</a
+          >
         </template>
       </Card>
       <Card v-if="inputType == 'genome'">
@@ -122,6 +129,8 @@ onMounted(() => parseInput())
             <span v-if="contigs[0] === genome">✅</span>
             <span v-if="contigs[0] !== genome">❌</span>
           </p>
+          <p>Genome length: {{ genome.length }}</p>
+          <p>Longest contig length: {{ contigs[0].length }}</p>
         </template>
       </Card>
     </div>
