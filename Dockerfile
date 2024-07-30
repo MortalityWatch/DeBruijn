@@ -1,4 +1,11 @@
-FROM nginx
+FROM node:lts-alpine
 
-COPY dist /usr/share/nginx/html
-COPY default.conf /etc/nginx/conf.d/default.conf
+RUN npm install -g http-server
+WORKDIR /app
+COPY package*.json ./
+RUN npm install
+COPY . .
+RUN npm run build
+
+EXPOSE 80
+CMD [ "http-server", "-p 80", "dist" ]
