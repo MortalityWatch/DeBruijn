@@ -14,19 +14,18 @@ import {
   makeReads,
   downloadFastaFile,
   shortestReadLength,
-  delay,
-  generateRandomDNAString
+  delay
 } from './lib'
 import NumberSlider from './components/NumberSlider.vue'
 
-const genome = ref(generateRandomDNAString(10))
+const genome = ref('AAABBBBA')
 const n = ref(3)
-const noiseReads = ref(5)
-const inputType = ref('genome')
-const reads_raw = ref(`${generateRandomDNAString(10)}\n${generateRandomDNAString(10)}`)
+const noiseReads = ref(0)
+const inputType = ref('reads')
+const reads_raw = ref(['AAA', 'AAB', 'ABB', 'BBB', 'BBB', 'BBA'].join('\n'))
 const contigs = ref([''])
-const k = ref(4)
-const network: Ref<NetworkData> = ref({ nodes: [], edges: [] })
+const k = ref(3)
+const network: Ref<NetworkData> = ref({ nodes: [], edges: [], edgesData: [] })
 const reads = computed(() => {
   if (inputType.value === 'genome') {
     if (genome.value.length < 3) return []
@@ -36,12 +35,15 @@ const reads = computed(() => {
   }
 })
 const displayArray = (a: string[]) => a.join(' · ')
-const minReadLength = ref(Math.max(5, Math.round(genome.value.length * 0.1)))
+const minReadLength = ref(Math.max(3, Math.round(genome.value.length * 0.1)))
 const kmers = computed(() => readsToKmers(k.value, reads.value))
 const k_max = ref(minReadLength.value)
 const readsString = computed(() => displayArray(reads.value))
 const kmersString = computed(() => displayArray(kmers.value))
 const contigsString = computed(() => displayArray(contigs.value))
+const longestContigLength = computed(() =>
+  contigs.value && contigs.value.length > 0 ? contigs.value[0].length : 0
+)
 
 watch(genome, () => {
   if (minReadLength.value < genome.value.length) return
@@ -49,9 +51,9 @@ watch(genome, () => {
 })
 watch(reads_raw, () => {
   const shortestRead = shortestReadLength(reads.value)
-  k_max.value = shortestRead - 1
+  k_max.value = shortestRead
   if (k.value < shortestRead) return
-  k.value = Math.max(2, shortestRead - 1)
+  k.value = Math.max(2, shortestRead)
 })
 watch(minReadLength, () => {
   k_max.value = minReadLength.value
@@ -88,7 +90,7 @@ onMounted(() => parseInput())
               🧬 Genome</label
             >
           </div>
-          <Textarea v-if="inputType === 'reads'" class="textarea" v-model="reads_raw" rows="5" />
+          <Textarea v-if="inputType === 'reads'" class="textarea" v-model="reads_raw" rows="7" />
           <div class="inputTypeGenome" v-if="inputType === 'genome'">
             <InputText
               name="genome"
@@ -130,7 +132,7 @@ onMounted(() => parseInput())
             <span v-if="contigs[0] !== genome">❌</span>
           </p>
           <p>Genome length: {{ genome.length }}</p>
-          <p>Longest contig length: {{ contigs[0].length }}</p>
+          <p>Longest contig length: {{ longestContigLength }}</p>
         </template>
       </Card>
     </div>

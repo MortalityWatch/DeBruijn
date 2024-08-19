@@ -15,4 +15,5 @@ export type Edge = {
 export type NetworkData = {
   nodes: Node[]
   edges: Edge[]
+  edgesData: Edge[]
 }

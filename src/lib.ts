@@ -28,44 +28,61 @@ export const makeGraph = (kmers: string[]) => {
 
 export const toNetworkData = (graph: Map<string, string[]>): NetworkData => {
   const nodesData = []
-  const edgesData = []
+  const edgesData: Edge[] = []
 
-  const keys = graph.keys()
-  const edges = new Map<string, Edge>()
+  const nodes = Array.from(graph.keys())
+  const edges: Edge[] = []
 
-  const keyArr = Array.from(keys)
-  for (const key of keyArr) {
-    nodesData.push({ id: nodesData.length, label: key })
-    graph.get(key)!!.forEach((item) => {
-      const e = key[0] + item
-      if (edges.has(e)) {
-        const edge = edges.get(e)!!
-        edge.count = edge.count!! + 1
-        edge.label = e
-      } else {
-        edges.set(e, {
-          from: keyArr.indexOf(key),
-          to: keyArr.indexOf(item),
-          count: 1,
-          label: e
-        } as Edge)
+  // Step 1: Precompute edge counts
+  const edgeCountMap = new Map<string, number>()
+
+  for (const node of nodes) {
+    const targetsFromNode = graph.get(node)!!
+
+    targetsFromNode.forEach((targetNode) => {
+      const e = node[0] + targetNode
+      const currentCount = edgeCountMap.get(e) ?? 0
+
+      edgeCountMap.set(e, currentCount + 1)
+    })
+  }
+
+  // Step 2: Build the edges array using the precomputed counts
+  // Store display and actual data separately.
+  const uniqueEdges = new Set<string>()
+  const nodeIndexMap = new Map<string, number>()
+  nodes.forEach((node, index) => nodeIndexMap.set(node, index))
+
+  for (const node of nodes) {
+    const nodeIndex = nodeIndexMap.get(node)!
+    nodesData.push({ id: nodesData.length, label: node })
+    const targetsFromNode = graph.get(node)!!
+
+    for (const targetNode of targetsFromNode) {
+      const targetIndex = nodeIndexMap.get(targetNode)!
+      const e = node[0] + targetNode
+      const totalCount = edgeCountMap.get(e)!!
+      const combination = `${nodeIndex}-${targetIndex}`
+
+      const edge = {
+        id: edgesData.length,
+        from: nodeIndex,
+        to: targetIndex,
+        arrows: 'to',
+        label: totalCount > 1 ? `${e} (${totalCount})` : e
+      } as Edge
+      edgesData.push(edge)
+      if (!uniqueEdges.has(combination)) {
+        uniqueEdges.add(combination)
+        edges.push(edge)
       }
-    })
+    }
   }
 
-  let i = 0
-  for (const value of edges.values()) {
-    edgesData.push({
-      id: i++,
-      from: value.from,
-      to: value.to,
-      arrows: 'to',
-      label: `${value.label}${value.count === 1 ? '' : ` (${value.count})`}`
-    })
-  }
   return {
     nodes: nodesData,
-    edges: edgesData
+    edges,
+    edgesData
   }
 }
 
@@ -78,13 +95,15 @@ export const longestReadLength = (reads: string[]) => {
   return reads.reduce((p, v) => (p.length > v.length ? p : v)).length
 }
 
+const MAX_CONTIGS = 1000
+
 export const getContigs = (networkData: NetworkData): string[] => {
-  const { nodes, edges } = networkData
+  const { nodes, edgesData } = networkData
 
   // Create a map of node IDs to their outgoing edges
   const adjacencyMap = new Map<number, { to: number; id: number }[]>()
   nodes.forEach((node) => adjacencyMap.set(node.id, []))
-  edges.forEach((edge) => {
+  edgesData.forEach((edge) => {
     const outEdges = adjacencyMap.get(edge.from) || []
     outEdges.push({ to: edge.to, id: edge.id })
     adjacencyMap.set(edge.from, outEdges)
@@ -96,6 +115,7 @@ export const getContigs = (networkData: NetworkData): string[] => {
   const extendPath = (node: number, path: number[], visitedEdges: Set<number>) => {
     path.push(node)
 
+    if (contigs.length > MAX_CONTIGS) return
     const outEdges = adjacencyMap.get(node)
     if (outEdges?.length === 0) {
       if (path.length > 1) contigs.push(path)
