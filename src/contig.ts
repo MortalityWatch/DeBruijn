@@ -1,6 +1,8 @@
 import { type Edge, type NetworkData } from './model'
 const adjacencyMap = new Map<number, { from: number; to: number; id: number }[]>()
 
+const MAX = 1000
+
 const travelPath = (
   node: number,
   visited: Set<number>,
@@ -8,6 +10,7 @@ const travelPath = (
   allPaths: Set<number>[],
   pathSet: Set<string>
 ) => {
+  if (allPaths.length > MAX) return
   const outEdges = adjacencyMap.get(node)
   if (!outEdges || outEdges.length === 0) {
     // Capture the current path when no more edges are available
@@ -92,5 +95,5 @@ export const getContigs = (paths: Set<number>[], edgesData: Edge[], k: number): 
     }
   })
 
-  return Array.from(uniqueContigs)
+  return Array.from(uniqueContigs).sort((a, b) => b.length - a.length)
 }

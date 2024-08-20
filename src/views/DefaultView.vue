@@ -29,9 +29,9 @@ const options = useQuerySync({
   readLength: 3,
   seed: -1
 })
+
 onMounted(() => {
   if (options.seed.value === -1) {
-    // Generate a new seed
     options.seed.value = Math.round(1000 * Math.random())
   }
 })
@@ -85,7 +85,8 @@ watch(
     options.reads,
     options.noiseReads,
     options.readLength,
-    options.k
+    options.k,
+    options.seed
   ],
   (a, b) => {
     if (options.genome.value.length >= 3) delay(parseInput, a[0] !== b[0] ? 0 : 500)
@@ -93,10 +94,13 @@ watch(
 )
 
 const parseInput = () => {
+  console.log('Making graph...')
   const graph = makeGraph(kmers.value)
+  console.log('Making network...')
   network.value = toNetworkData(graph)
-
+  console.log('Finding paths...')
   const paths = getEdgePaths(network.value)
+  console.log('Calculating contigs...')
   contigs.value = getContigs(paths, network.value.edgesData, options.k.value)
 }
 
@@ -148,13 +152,13 @@ onMounted(() => parseInput())
               title="# of genome reads:"
               v-model:n="options.reads.value"
               :min="0"
-              :max="20"
+              :max="10"
             />
             <NumberSlider
               title="# of random reads:"
               v-model:n="options.noiseReads.value"
               :min="0"
-              :max="100"
+              :max="10"
             />
             <NumberSlider
               title="Read length:"
@@ -164,6 +168,7 @@ onMounted(() => parseInput())
             />
           </div>
           <NumberSlider title="k-mer size:" v-model:n="options.k.value" :min="2" :max="k_max" />
+          <NumberSlider title="Seed:" v-model:n="options.seed.value" :min="1" :max="1000" />
           <a
             v-if="options.inputType.value === 'genome'"
             class="dl"
@@ -273,9 +278,10 @@ onMounted(() => parseInput())
 
         <h3>3. Traversing the Graph:</h3>
         <p>
-          The graph is traversed to find all possible paths, known as contigs. These paths represent
-          all possible sequences of DNA that can be assembled from the k-mers, but do not
-          necessarily have to exist in nature.
+          The graph is traversed (using depth first serach (DFS)) to find all possible paths for all
+          nodes, known as contigs. These paths represent all possible sequences (candidate genomes)
+          of DNA that can be assembled from the k-mers, but do not necessarily have to exist in
+          nature.
         </p>
 
         <h3>4. Result</h3>

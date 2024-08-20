@@ -238,6 +238,36 @@ export const useQuerySync = <T extends Record<string, QueryParams>>(
       router.push({ query: { ...route.query, [key as string]: newVal } as LocationQueryRaw })
     })
   })
+  // Watch for changes in the URL and update the refs accordingly
+  watch(
+    () => route.query,
+    (newQuery) => {
+      keys.forEach((key) => {
+        let queryValue = newQuery[key as string]
+
+        if (Array.isArray(queryValue)) {
+          queryValue = queryValue[0] // Use the first value from the array
+        }
+
+        let parsedValue: QueryParams
+
+        if (typeof queryValue === 'string') {
+          if (!isNaN(Number(queryValue))) {
+            parsedValue = Number(queryValue)
+          } else if (queryValue === 'true' || queryValue === 'false') {
+            parsedValue = queryValue === 'true'
+          } else {
+            parsedValue = queryValue
+          }
+        } else {
+          parsedValue = defaultValues[key as keyof T]
+        }
+
+        refs[key as keyof T].value = parsedValue as T[keyof T]
+      })
+    },
+    { immediate: true }
+  )
 
   return refs
 }
