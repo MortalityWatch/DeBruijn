@@ -17,7 +17,7 @@ import {
   useQuerySync
 } from '../lib'
 import NumberSlider from '../components/NumberSlider.vue'
-import { getContigs, getEdgePaths } from '@/contig'
+import { getContigs } from '@/contig'
 
 const options = useQuerySync({
   inputType: 'reads',
@@ -98,10 +98,9 @@ const parseInput = () => {
   const graph = makeGraph(kmers.value)
   console.log('Making network...')
   network.value = toNetworkData(graph)
-  console.log('Finding paths...')
-  const paths = getEdgePaths(network.value)
   console.log('Calculating contigs...')
-  contigs.value = getContigs(paths, network.value.edgesData, options.k.value)
+  contigs.value = getContigs(network.value.edgesData, options.k.value)
+  console.log('Done')
 }
 
 onMounted(() => parseInput())
