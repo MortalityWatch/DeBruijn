@@ -22,8 +22,8 @@ import { getContigs, getEdgePaths } from '@/contig'
 const options = useQuerySync({
   inputType: 'reads',
   k: 3,
-  readsRaw: ['AAA', 'AAB', 'ABB', 'BBB', 'BBB', 'BBA'].join('\n'),
-  genome: 'AAABBBBA',
+  readsRaw: ['AAA', 'AAT', 'ATT', 'TTT', 'TTT', 'TTA'].join('\n'),
+  genome: 'AAATTTTA',
   reads: 6,
   noiseReads: 0,
   readLength: 3,
