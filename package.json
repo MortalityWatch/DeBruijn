@@ -10,18 +10,23 @@
     "build-only": "vite build",
     "type-check": "vue-tsc --build --force",
     "lint": "eslint . --ext .vue,.js,.jsx,.cjs,.mjs,.ts,.tsx,.cts,.mts --fix --ignore-path .gitignore",
-    "format": "prettier --write src/"
+    "format": "prettier --write src/",
+    "test:unit": "vitest"
   },
   "dependencies": {
     "@primevue/themes": "^4.0.2",
+    "graphlib": "^2.1.8",
     "primeflex": "^3.3.1",
     "primevue": "^4.0.2",
     "vis-network": "^9.1.9",
-    "vue": "^3.4.34"
+    "vitest": "^2.0.5",
+    "vue": "^3.4.34",
+    "vue-router": "^4.4.3"
   },
   "devDependencies": {
     "@rushstack/eslint-patch": "^1.10.4",
     "@tsconfig/node20": "^20.1.4",
+    "@types/graphlib": "^2.1.12",
     "@types/node": "^22.0.0",
     "@vitejs/plugin-vue": "^5.1.1",
     "@vue/eslint-config-prettier": "^9.0.0",

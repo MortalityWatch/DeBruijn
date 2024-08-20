@@ -1,4 +1,7 @@
-import type { Edge, NetworkData } from './model'
+import { useRoute, useRouter, type LocationQueryRaw } from 'vue-router'
+import type { Edge, NetworkData, QueryParams, RefOptions } from './model'
+import { ref, watch } from 'vue'
+import { type Ref } from 'vue'
 
 export const readsToKmers = (k: number, reads: string[]) => {
   const kmers = []
@@ -69,13 +72,16 @@ export const toNetworkData = (graph: Map<string, string[]>): NetworkData => {
         from: nodeIndex,
         to: targetIndex,
         arrows: 'to',
-        label: totalCount > 1 ? `${e} (${totalCount})` : e
+        label: e
       } as Edge
-      edgesData.push(edge)
+
       if (!uniqueEdges.has(combination)) {
         uniqueEdges.add(combination)
-        edges.push(edge)
+        const edgeCopy = JSON.parse(JSON.stringify(edge))
+        if (totalCount > 1) edgeCopy.label = `${edgeCopy.label} (${totalCount})`
+        edges.push(edgeCopy)
       }
+      edgesData.push(edge)
     }
   }
 
@@ -95,125 +101,63 @@ export const longestReadLength = (reads: string[]) => {
   return reads.reduce((p, v) => (p.length > v.length ? p : v)).length
 }
 
-const MAX_CONTIGS = 1000
-
-export const getContigs = (networkData: NetworkData): string[] => {
-  const { nodes, edgesData } = networkData
-
-  // Create a map of node IDs to their outgoing edges
-  const adjacencyMap = new Map<number, { to: number; id: number }[]>()
-  nodes.forEach((node) => adjacencyMap.set(node.id, []))
-  edgesData.forEach((edge) => {
-    const outEdges = adjacencyMap.get(edge.from) || []
-    outEdges.push({ to: edge.to, id: edge.id })
-    adjacencyMap.set(edge.from, outEdges)
-  })
-
-  // Find all contigs starting from each starting node
-  const contigs: number[][] = []
-
-  const extendPath = (node: number, path: number[], visitedEdges: Set<number>) => {
-    path.push(node)
-
-    if (contigs.length > MAX_CONTIGS) return
-    const outEdges = adjacencyMap.get(node)
-    if (outEdges?.length === 0) {
-      if (path.length > 1) contigs.push(path)
-      return
-    }
-
-    outEdges?.forEach((edge) => {
-      if (path.length > 1) contigs.push(path)
-      if (visitedEdges.has(edge.id)) {
-        return
-      } else {
-        const targetNode = edge.to
-        visitedEdges.add(edge.id)
-        extendPath(targetNode, path.slice(), new Set(visitedEdges))
-      }
-    })
-  }
-
-  // Find all nodes with outgoing edges and generate contigs
-  const startingNodes = nodes.filter((node) => (adjacencyMap.get(node.id) || []).length)
-  startingNodes.forEach((node) => {
-    if (!(adjacencyMap.get(node.id) || []).length) return
-    extendPath(node.id, [], new Set())
-  })
-
-  // Convert contigs of node IDs to contigs of node labels
-  const nodeMap = new Map<number, string>()
-  nodes.forEach((node) => nodeMap.set(node.id, node.label))
-
-  const contigsArr = Array.from(contigs)
-  const contigLabels = new Set<string>()
-  contigsArr.forEach((contig: number[]) => {
-    if (contig.length < 3) return
-
-    const result: string[] = []
-    for (let i = 0; i < contig.length; i++) {
-      const kmer = nodeMap.get(contig[i])!!
-      if (i === 0) {
-        result.push(kmer) // First kmer
-      } else {
-        result.push(kmer.slice(-1))
-      }
-    }
-    contigLabels.add(result.join(''))
-  })
-  return Array.from(contigLabels).sort((a, b) => b.length - a.length)
+const seededRandom = (seed: number): number => {
+  seed = (seed * 1664525 + 1013904223) % 4294967296
+  return seed / 4294967296
 }
 
-const splitStringRandomly = (s: string, n: number): string[] => {
-  if (n <= 0 || n > s.length) {
-    throw new Error('Number of pieces must be between 1 and the length of the string')
+export const getRandomSubstrings = (
+  s: string,
+  readLength: number,
+  count: number,
+  seed: number
+): string[] => {
+  if (readLength > s.length) {
+    throw new Error('Substring length cannot be greater than the string length')
   }
 
-  // Generate n-1 random split points
-  const splitPoints = Array.from(
-    new Set(Array.from({ length: n - 1 }, () => Math.floor(Math.random() * (s.length - 1)) + 1))
-  ).sort((a, b) => a - b)
+  const maxStartIndex = s.length - readLength
+  const substrings: string[] = []
+  let currentSeed = seed
 
-  // Add the start and end points
-  splitPoints.unshift(0)
-  splitPoints.push(s.length)
-
-  // Create the list of pieces by splitting the string at the split points
-  const pieces: string[] = []
-  for (let i = 0; i < splitPoints.length - 1; i++) {
-    pieces.push(s.slice(splitPoints[i], splitPoints[i + 1]))
+  for (let i = 0; i < count; i++) {
+    currentSeed = (currentSeed * 1664525 + 1013904223) % 4294967296
+    const startIndex = Math.floor(seededRandom(currentSeed) * (maxStartIndex + 1))
+    substrings.push(s.substring(startIndex, startIndex + readLength))
   }
 
-  return pieces
+  return substrings
 }
 
 const shuffleString = (s: string) => {
   const array = s.split('')
   for (let i = array.length - 1; i > 0; i--) {
-    const j = Math.floor(Math.random() * (i + 1))
+    const j = Math.floor(seededRandom(1) * (i + 1))
     ;[array[i], array[j]] = [array[j], array[i]]
   }
   return array.join('')
 }
 
-export const makeReads = (genome: string, n: number, minReadLength: number, noiseReads: number) => {
+export const makeReads = (
+  genome: string,
+  readLength: number,
+  reads: number,
+  noiseReads: number,
+  seed: number
+) => {
   const result = []
-  while (result.length < n) {
-    result.push(...splitStringRandomly(genome, 2).filter((x) => x.length >= minReadLength))
-  }
-  while (result.length - n < noiseReads) {
-    result.push(
-      ...splitStringRandomly(shuffleString(genome), 2).filter((x) => x.length >= minReadLength)
-    )
-  }
+  result.push(...getRandomSubstrings(genome, readLength, reads, seed))
+  const shuffledGenome = shuffleString(genome)
+  result.push(...getRandomSubstrings(shuffledGenome, readLength, noiseReads, seed))
+
   return result
 }
 
-export const downloadFastaFile = (reads: string[], filename: string): void => {
+export const downloadFastaFile = (reads: string[], filename: string, readname: string): void => {
   // Create the FASTA formatted content
   let fastaContent = ''
   reads.forEach((read, index) => {
-    fastaContent += `>Read_${index + 1}\n${read}\n`
+    fastaContent += `>${readname}_${index + 1}\n${read}\n`
   })
 
   // Create a Blob from the content
@@ -222,7 +166,7 @@ export const downloadFastaFile = (reads: string[], filename: string): void => {
   // Create a link element and trigger a download
   const link = document.createElement('a')
   link.href = URL.createObjectURL(blob)
-  link.download = filename
+  link.download = `${filename}.fa`
 
   // Append the link to the document body and trigger a click
   document.body.appendChild(link)
@@ -255,11 +199,45 @@ export const delay = (fun: () => void, time: number = 333) => {
   }, time) as unknown as number
 }
 
-export const generateRandomDNAString = (length: number): string => {
-  const characters = 'ACTG'
-  let result = ''
-  for (let i = 0; i < length; i++) {
-    result += characters.charAt(Math.floor(Math.random() * characters.length))
-  }
-  return result
+export const useQuerySync = <T extends Record<string, QueryParams>>(
+  defaultValues: T
+): RefOptions<T> => {
+  const router = useRouter()
+  const route = useRoute()
+
+  const refs = {} as RefOptions<T>
+
+  Object.entries(defaultValues).forEach(([key, defaultValue]) => {
+    let queryValue = route.query[key as string]
+
+    // Handle the case where queryValue is an array
+    if (Array.isArray(queryValue)) {
+      queryValue = queryValue[0] // Use the first value from the array
+    }
+
+    let parsedValue: QueryParams
+
+    if (typeof queryValue === 'string') {
+      if (!isNaN(Number(queryValue))) {
+        parsedValue = Number(queryValue)
+      } else if (queryValue === 'true' || queryValue === 'false') {
+        parsedValue = queryValue === 'true'
+      } else {
+        parsedValue = queryValue
+      }
+    } else {
+      parsedValue = defaultValue
+    }
+
+    refs[key as keyof T] = ref(parsedValue) as Ref<T[keyof T]>
+  })
+
+  const keys = Object.keys(refs)
+  keys.forEach((key) => {
+    watch(refs[key], (newVal) => {
+      router.push({ query: { ...route.query, [key as string]: newVal } as LocationQueryRaw })
+    })
+  })
+
+  return refs
 }

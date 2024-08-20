@@ -10,7 +10,7 @@ const props = defineProps<{ networkData: NetworkData }>()
 
 const updateNetwork = () => {
   if (!networkContainer.value) return
-  network.value = new Network(networkContainer.value, props.networkData, { autoResize: false })
+  network.value = new Network(networkContainer.value, props.networkData, {})
 }
 
 onMounted(() => updateNetwork)
