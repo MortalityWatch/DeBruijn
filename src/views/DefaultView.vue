@@ -325,6 +325,14 @@ onMounted(() => parseInput())
           assembly process and its potential issues using the De Bruijn graph algorithm.
         </p>
 
+        <h2>Aligning Reads against Genome or Contigs</h2>
+        <p>
+          You can align the reads against the genome or contigs using common bioinformatics tools.
+        </p>
+        <p>bowtie2-build genome.fa genome</p>
+        <p>bowtie2 --no-unal -x genome -fU reads.fa| samtools sort -@ 7 -o temp.bam</p>
+        <p>samtools index temp.bam</p>
+
         <h2>Open Source</h2>
         <p>
           The full code of this tool can be found at:
