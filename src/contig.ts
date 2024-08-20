@@ -1,6 +1,5 @@
 import { type Edge } from './model'
 
-// Utility function to collapse overlapping sequences
 const collapse = (seq1: string, seq2: string, k: number): string => seq1 + seq2.substring(k - 1)
 
 const travelPath = (
@@ -17,26 +16,22 @@ const travelPath = (
 ) => {
   const outEdges = adjacencyMap.get(node)
   if (!outEdges || outEdges.length === 0) {
-    // Capture the current path and contig when no more edges are available
-    if (currentPath.length > 0) {
-      const pathString = currentPath.join(',')
-      if (!pathSet.has(pathString)) {
-        pathSet.add(pathString)
-        allPaths.push(new Set(currentPath))
-        contigs.add(currentContig)
-      }
+    const pathString = currentPath.join(',')
+    if (!pathSet.has(pathString)) {
+      pathSet.add(pathString)
+      allPaths.push(new Set(currentPath))
+      contigs.add(currentContig)
     }
     return
   }
 
   for (const edge of outEdges) {
-    if (visited.has(edge.id)) continue // Skip already visited edges
+    if (visited.has(edge.id)) continue
 
-    const nextContig = edgeMap.has(edge.id)
-      ? currentPath.length === 0
+    const nextContig =
+      currentPath.length === 0
         ? edgeMap.get(edge.id)!.label
         : collapse(currentContig, edgeMap.get(edge.id)!.label, k)
-      : currentContig
 
     visited.add(edge.id)
     currentPath.push(edge.id)
@@ -54,7 +49,6 @@ const travelPath = (
       k
     )
 
-    // Backtrack to explore other paths
     visited.delete(edge.id)
     currentPath.pop()
   }
@@ -98,10 +92,8 @@ export const dfs = (
 }
 
 export const getContigs = (edgesData: Edge[], k: number): string[] => {
-  // Reset adjacency map for each function call
   const adjacencyMap = new Map<number, { from: number; to: number; id: number }[]>()
 
-  // Build adjacency map
   edgesData.forEach((edge) => {
     const outEdges = adjacencyMap.get(edge.from) || []
     outEdges.push({ from: edge.from, to: edge.to, id: edge.id })
@@ -112,16 +104,18 @@ export const getContigs = (edgesData: Edge[], k: number): string[] => {
   const allPaths: Set<number>[] = []
   const allContigs = new Set<string>()
 
-  // Traverse from each node that has outgoing edges
-  const startingNodes = Array.from(adjacencyMap.keys())
-  startingNodes.forEach((node) => {
+  adjacencyMap.forEach((_, node) => {
     const { paths, contigs } = dfs(node, edgeMap, adjacencyMap, k)
     paths.forEach((path) => allPaths.push(path))
     contigs.forEach((contig) => allContigs.add(contig))
   })
 
-  // Filter contigs to exclude those shorter than the k-mer length
   return Array.from(allContigs)
     .filter((x) => x.length > k)
-    .sort((a, b) => b.length - a.length)
+    .sort((a, b) => {
+      if (a.length !== b.length) {
+        return b.length - a.length // Sort by length (descending)
+      }
+      return a.localeCompare(b) // Sort lexicographically
+    })
 }

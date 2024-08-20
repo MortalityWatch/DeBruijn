@@ -42,7 +42,8 @@ describe('Pathfinding', () => {
     ] as Edge[]
 
     const paths = getContigs(data, 3)
-    expect(paths).toEqual(['ATGAT', 'TGATG', 'GATGA', 'ATGA', 'TGAT', 'GATG'])
+    console.log(paths)
+    expect(paths).toEqual(['ATGAT', 'GATGA', 'TGATG', 'ATGA', 'GATG', 'TGAT'])
   })
 
   it('handles isolated nodes', () => {
