@@ -166,7 +166,7 @@ export const downloadFastaFile = (reads: string[], filename: string, readname: s
   // Create a link element and trigger a download
   const link = document.createElement('a')
   link.href = URL.createObjectURL(blob)
-  link.download = `${filename}.fa`
+  link.download = `${filename}`
 
   // Append the link to the document body and trigger a click
   document.body.appendChild(link)
