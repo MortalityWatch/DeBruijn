@@ -168,7 +168,13 @@ onMounted(() => parseInput())
             />
           </div>
           <NumberSlider title="k-mer size:" v-model:n="options.k.value" :min="2" :max="k_max" />
-          <NumberSlider title="Seed:" v-model:n="options.seed.value" :min="1" :max="1000" />
+          <NumberSlider
+            v-if="options.inputType.value === 'genome'"
+            title="Seed:"
+            v-model:n="options.seed.value"
+            :min="1"
+            :max="1000"
+          />
           <a
             v-if="options.inputType.value === 'genome'"
             class="dl"
