@@ -3,7 +3,7 @@ import Card from 'primevue/card'
 import RadioButton from 'primevue/radiobutton'
 import Textarea from 'primevue/textarea'
 import InputText from 'primevue/inputtext'
-import { ref, type Ref, computed, onMounted, watch } from 'vue'
+import { ref, type Ref, computed, onMounted, watch, unref } from 'vue'
 import Graph from '../components/DeBruijnGraph.vue'
 import type { NetworkData } from '../model'
 import {
@@ -17,8 +17,9 @@ import {
   useQuerySync
 } from '../lib'
 import NumberSlider from '../components/NumberSlider.vue'
-import { getContigs } from '@/contig'
+import ProgressSpinner from 'primevue/progressspinner'
 
+const isCalculating = ref(false)
 const options = useQuerySync({
   inputType: 'reads',
   k: 3,
@@ -30,13 +31,43 @@ const options = useQuerySync({
   seed: -1
 })
 
+let contigWorker: Worker | undefined = undefined
+const updateContigs = () => {
+  stopWorker()
+  startWorker()
+  const edgesData = JSON.parse(JSON.stringify(unref(network.value.edgesData)))
+  contigWorker?.postMessage({
+    edgesData: edgesData,
+    k: options.k.value
+  })
+
+  contigWorker!!.onmessage = (event: MessageEvent) => {
+    if (event.data === 'start') {
+      isCalculating.value = true
+      contigs.value = []
+    } else if (event.data === 'end') isCalculating.value = false
+    else contigs.value.push(...event.data)
+  }
+}
+
+const startWorker = () => {
+  contigWorker = new Worker(new URL('../workers/worker.ts', import.meta.url), {
+    type: 'module'
+  })
+}
+
+const stopWorker = () => {
+  contigWorker?.terminate()
+  contigWorker = undefined
+}
+
 onMounted(() => {
   if (options.seed.value === -1) {
     options.seed.value = Math.round(1000 * Math.random())
   }
 })
 
-const contigs = ref([''])
+const contigs: Ref<string[]> = ref([])
 const network: Ref<NetworkData> = ref({ nodes: [], edges: [], edgesData: [] })
 const reads = computed(() => {
   if (options.inputType.value === 'genome') {
@@ -75,6 +106,7 @@ watch(options.readsRaw, () => {
 watch(options.readLength, () => {
   k_max.value = options.readLength.value
   if (options.k.value >= options.genome.value.length) options.k.value = options.readLength.value
+  if (options.k.value > options.readLength.value) options.k.value = options.readLength.value
 })
 
 watch(
@@ -98,8 +130,10 @@ const parseInput = () => {
   const graph = makeGraph(kmers.value)
   console.log('Making network...')
   network.value = toNetworkData(graph)
+
   console.log('Calculating contigs...')
-  contigs.value = getContigs(network.value.edgesData, options.k.value)
+
+  updateContigs()
   console.log('Done')
 }
 
@@ -229,8 +263,8 @@ onMounted(() => parseInput())
         </template>
       </Card>
       <Card>
-        <template #title
-          >Contigs ({{ contigs.length }})<a
+        <template #title>
+          Contigs ({{ contigs.length }})<a
             class="dl"
             style="cursor: pointer"
             @click="downloadFastaFile(contigs, 'contigs.fa', 'Contig')"
@@ -244,7 +278,7 @@ onMounted(() => parseInput())
               <span v-if="index < contigs.length - 1"> · </span>
             </span>
           </div>
-          <!-- <Textarea class="textarea" v-model="contigsString" rows="5" /> -->
+          <ProgressSpinner v-if="isCalculating" style="width: 50px; height: 50px" />
         </template>
       </Card>
     </div>

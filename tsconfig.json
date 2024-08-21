@@ -7,5 +7,14 @@
     {
       "path": "./tsconfig.app.json"
     }
-  ]
+  ],
+  "compilerOptions": {
+    "lib": [
+      "webworker",
+      "dom"
+    ],
+    "types": [
+      "vite/client"
+    ]
+  }
 }

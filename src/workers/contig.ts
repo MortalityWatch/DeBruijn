@@ -1,4 +1,4 @@
-import { type Edge } from './model'
+import { type Edge } from '../model'
 
 const collapse = (seq1: string, seq2: string, k: number): string => seq1 + seq2.substring(k - 1)
 

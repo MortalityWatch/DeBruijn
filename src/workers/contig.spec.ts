@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest'
 import { getContigs } from './contig'
-import { type Edge } from './model'
+import { type Edge } from '../model'
 
 describe('Pathfinding', () => {
   it('finds paths in a linear sequence', () => {
