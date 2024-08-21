@@ -46,7 +46,12 @@ const updateContigs = () => {
       isCalculating.value = true
       contigs.value = []
     } else if (event.data === 'end') isCalculating.value = false
-    else contigs.value.push(...event.data)
+    else {
+      let allContigs = [...contigs.value, ...event.data]
+      contigs.value = Array.from(allContigs)
+        .filter((x) => x.length > options.k.value)
+        .sort((a, b) => b.length - a.length)
+    }
   }
 }
 
@@ -220,18 +225,21 @@ onMounted(() => parseInput())
       <Card v-if="options.inputType.value == 'genome'">
         <template #title>Result</template>
         <template #content>
-          <p>
-            Any contig matches input genome:
-            <span v-if="contigs.some((contig) => contig === options.genome.value)">✅</span>
-            <span v-if="!contigs.some((contig) => contig === options.genome.value)">❌</span>
-          </p>
-          <p>
-            Longest contig matches input genome:
-            <span v-if="contigs[0] === options.genome.value">✅</span>
-            <span v-if="contigs[0] !== options.genome.value">❌</span>
-          </p>
           <p>Genome length: {{ options.genome.value.length }}</p>
-          <p>Longest contig length: {{ longestContigLength }}</p>
+          <div v-if="!isCalculating">
+            <p>
+              Any contig matches input genome:
+              <span v-if="contigs.some((contig) => contig === options.genome.value)">✅</span>
+              <span v-if="!contigs.some((contig) => contig === options.genome.value)">❌</span>
+            </p>
+            <p>
+              Longest contig matches input genome:
+              <span v-if="contigs[0] === options.genome.value">✅</span>
+              <span v-if="contigs[0] !== options.genome.value">❌</span>
+            </p>
+            <p>Longest contig length: {{ longestContigLength }}</p>
+          </div>
+          <ProgressSpinner v-if="isCalculating" style="width: 50px; height: 50px" />
         </template>
       </Card>
     </div>

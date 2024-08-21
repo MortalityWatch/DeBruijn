@@ -7,7 +7,6 @@ const travelPath = (
   visited: Set<number>,
   currentPath: number[],
   currentContig: string,
-  allPaths: Set<number>[],
   pathSet: Set<string>,
   contigs: Set<string>,
   edgeMap: Map<number, Edge>,
@@ -19,7 +18,6 @@ const travelPath = (
     const pathString = currentPath.join(',')
     if (!pathSet.has(pathString)) {
       pathSet.add(pathString)
-      allPaths.push(new Set(currentPath))
       contigs.add(currentContig)
     }
     return
@@ -41,7 +39,6 @@ const travelPath = (
       visited,
       currentPath,
       nextContig,
-      allPaths,
       pathSet,
       contigs,
       edgeMap,
@@ -58,7 +55,6 @@ const travelPath = (
     const pathString = currentPath.join(',')
     if (!pathSet.has(pathString)) {
       pathSet.add(pathString)
-      allPaths.push(new Set(currentPath))
       contigs.add(currentContig)
     }
   }
@@ -69,29 +65,21 @@ export const dfs = (
   edgeMap: Map<number, Edge>,
   adjacencyMap: Map<number, { from: number; to: number; id: number }[]>,
   k: number
-): { paths: Set<number>[]; contigs: Set<string> } => {
-  const allPaths: Set<number>[] = []
+): Set<string> => {
   const contigs = new Set<string>()
   const visited = new Set<number>()
   const currentPath: number[] = []
   const pathSet = new Set<string>()
 
-  travelPath(
-    startingNode,
-    visited,
-    currentPath,
-    '',
-    allPaths,
-    pathSet,
-    contigs,
-    edgeMap,
-    adjacencyMap,
-    k
-  )
-  return { paths: allPaths, contigs }
+  travelPath(startingNode, visited, currentPath, '', pathSet, contigs, edgeMap, adjacencyMap, k)
+  return contigs
 }
 
-export const getContigs = (edgesData: Edge[], k: number): string[] => {
+export const getContigs = (
+  edgesData: Edge[],
+  k: number,
+  self?: Window & typeof globalThis // optionally used for streaming
+): string[] => {
   const adjacencyMap = new Map<number, { from: number; to: number; id: number }[]>()
 
   edgesData.forEach((edge) => {
@@ -101,15 +89,15 @@ export const getContigs = (edgesData: Edge[], k: number): string[] => {
   })
 
   const edgeMap = new Map<number, Edge>(edgesData.map((edge) => [edge.id, edge]))
-  const allPaths: Set<number>[] = []
   const allContigs = new Set<string>()
 
   adjacencyMap.forEach((_, node) => {
-    const { paths, contigs } = dfs(node, edgeMap, adjacencyMap, k)
-    paths.forEach((path) => allPaths.push(path))
+    const contigs = dfs(node, edgeMap, adjacencyMap, k)
+    self?.postMessage(contigs)
     contigs.forEach((contig) => allContigs.add(contig))
   })
 
+  if (self) return []
   return Array.from(allContigs)
     .filter((x) => x.length > k)
     .sort((a, b) => {
