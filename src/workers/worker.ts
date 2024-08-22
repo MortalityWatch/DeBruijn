@@ -4,7 +4,6 @@ const contigs = new Set<string>()
 let lastIndex = 0 // Index to track the last sent contigs
 
 const flushBuffer = () => {
-  console.log('flush')
   const contigsArray = Array.from(contigs)
 
   if (lastIndex < contigsArray.length) {

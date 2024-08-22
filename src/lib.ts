@@ -1,7 +1,10 @@
 import { useRoute, useRouter, type LocationQueryRaw } from 'vue-router'
-import type { Edge, NetworkData, QueryParams, RefOptions } from './model'
+import type { Edge, NetworkData } from './model'
 import { ref, watch } from 'vue'
 import { type Ref } from 'vue'
+
+export const SEP = ' · '
+export const NEW_LINE = '\n'
 
 export const readsToKmers = (k: number, reads: string[]) => {
   const kmers = []
@@ -198,37 +201,55 @@ export const delay = (fun: () => void, time: number = 333) => {
     timeoutIds[hashCode(fun.toString())] = undefined
   }, time) as unknown as number
 }
+export type QueryParams = string | number | boolean
 
-export const useQuerySync = <T extends Record<string, QueryParams>>(
+type UseQuerySyncRefOptions<T> = {
+  [K in keyof T]: Ref<T[K]>
+}
+
+export const useQuerySync = <T extends Record<string, QueryParams | string[]>>(
   defaultValues: T
-): RefOptions<T> => {
+): UseQuerySyncRefOptions<T> => {
   const router = useRouter()
   const route = useRoute()
 
-  const refs = {} as RefOptions<T>
+  const refs = {} as UseQuerySyncRefOptions<T>
 
   // Initialize refs with values from the URL if present, otherwise use defaults
   Object.entries(defaultValues).forEach(([key, defaultValue]) => {
     let queryValue = route.query[key as string]
 
-    // Handle the case where queryValue is an array
-    if (Array.isArray(queryValue)) {
-      queryValue = queryValue[0] // Use the first value from the array
-    }
+    if (Array.isArray(defaultValue)) {
+      // Ensure that queryValue is an array
+      const queryArrayValue = Array.isArray(queryValue)
+        ? queryValue
+        : queryValue
+          ? [queryValue]
+          : []
 
-    let parsedValue: QueryParams = defaultValue
-
-    if (typeof queryValue === 'string') {
-      if (!isNaN(Number(queryValue))) {
-        parsedValue = Number(queryValue)
-      } else if (queryValue === 'true' || queryValue === 'false') {
-        parsedValue = queryValue === 'true'
-      } else if (queryValue.trim() !== '') {
-        parsedValue = queryValue
+      // Use the query array if present, otherwise default to the provided default array
+      refs[key as keyof T] = ref(
+        queryArrayValue.length > 0 ? queryArrayValue : defaultValue
+      ) as Ref<T[keyof T]>
+    } else {
+      if (Array.isArray(queryValue)) {
+        queryValue = queryValue[0] // Use the first value from the array
       }
-    }
 
-    refs[key as keyof T] = ref(parsedValue) as Ref<T[keyof T]>
+      let parsedValue: QueryParams = defaultValue as QueryParams
+
+      if (typeof queryValue === 'string') {
+        if (!isNaN(Number(queryValue))) {
+          parsedValue = Number(queryValue)
+        } else if (queryValue === 'true' || queryValue === 'false') {
+          parsedValue = queryValue === 'true'
+        } else if (queryValue.trim() !== '') {
+          parsedValue = queryValue
+        }
+      }
+
+      refs[key as keyof T] = ref(parsedValue) as Ref<T[keyof T]>
+    }
   })
 
   const keys = Object.keys(refs)
@@ -236,21 +257,42 @@ export const useQuerySync = <T extends Record<string, QueryParams>>(
   // Sync ref values to URL query when they change
   keys.forEach((key) => {
     watch(refs[key], (newVal) => {
-      // Only push to the router if the value is valid
-      if (newVal !== undefined && newVal !== null && newVal !== '') {
-        delay(() => {
-          router.push({ query: { ...route.query, [key]: newVal } as LocationQueryRaw })
-        }, 500)
+      if (Array.isArray(newVal)) {
+        // If the array is empty, remove the key from the query
+        if (newVal.length === 0) {
+          const remainingQuery = { ...route.query }
+          delete remainingQuery[key]
+          delay(() => {
+            router.push({ query: remainingQuery as LocationQueryRaw })
+          }, 500)
+        } else {
+          // If the array has values, push them to the query
+          delay(() => {
+            router.push({
+              query: { ...route.query, [key]: newVal } as LocationQueryRaw
+            })
+          }, 500)
+        }
       } else {
-        // Remove the key from the query if the value is empty or undefined
-        const remainingQuery = { ...route.query }
-        delete remainingQuery[key]
-        delay(() => {
-          router.push({ query: remainingQuery as LocationQueryRaw })
-        }, 500)
+        // Handle non-array values as before
+        if (newVal !== undefined && newVal !== null && newVal !== '') {
+          delay(() => {
+            router.push({
+              query: { ...route.query, [key]: newVal } as LocationQueryRaw
+            })
+          }, 500)
+        } else {
+          const remainingQuery = { ...route.query }
+          delete remainingQuery[key]
+          delay(() => {
+            router.push({ query: remainingQuery as LocationQueryRaw })
+          }, 500)
+        }
       }
     })
   })
 
   return refs
 }
+
+export const displayArray = (a: string[], sep = SEP) => a.join(sep)
