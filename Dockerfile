@@ -8,4 +8,4 @@ COPY . .
 RUN npm run build
 
 EXPOSE 80
-CMD [ "http-server", "-p 80", "dist" ]
+CMD [ "http-server", "-p 80", "-c-1", "dist", "--proxy", "http://localhost:80?/" ]
