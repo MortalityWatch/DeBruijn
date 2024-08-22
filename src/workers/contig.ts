@@ -1,4 +1,14 @@
-import { type Edge } from '../model'
+import type { Edge } from '@/model'
+
+export class ContigStream extends EventTarget {
+  emitContig(contig: string) {
+    this.dispatchEvent(new CustomEvent('data', { detail: contig }))
+  }
+
+  end() {
+    this.dispatchEvent(new Event('end'))
+  }
+}
 
 const collapse = (seq1: string, seq2: string, k: number): string => seq1 + seq2.substring(k - 1)
 
@@ -8,17 +18,17 @@ const travelPath = (
   currentPath: number[],
   currentContig: string,
   pathSet: Set<string>,
-  contigs: Set<string>,
   edgeMap: Map<number, Edge>,
   adjacencyMap: Map<number, { from: number; to: number; id: number }[]>,
-  k: number
+  k: number,
+  stream: ContigStream
 ) => {
   const outEdges = adjacencyMap.get(node)
   if (!outEdges || outEdges.length === 0) {
     const pathString = currentPath.join(',')
     if (!pathSet.has(pathString)) {
       pathSet.add(pathString)
-      contigs.add(currentContig)
+      stream.emitContig(currentContig) // Emit the contig
     }
     return
   }
@@ -34,52 +44,22 @@ const travelPath = (
     visited.add(edge.id)
     currentPath.push(edge.id)
 
-    travelPath(
-      edge.to,
-      visited,
-      currentPath,
-      nextContig,
-      pathSet,
-      contigs,
-      edgeMap,
-      adjacencyMap,
-      k
-    )
+    travelPath(edge.to, visited, currentPath, nextContig, pathSet, edgeMap, adjacencyMap, k, stream)
 
     visited.delete(edge.id)
     currentPath.pop()
   }
 
-  // Capture the path and contig even when backtracking
   if (currentPath.length > 0) {
     const pathString = currentPath.join(',')
     if (!pathSet.has(pathString)) {
       pathSet.add(pathString)
-      contigs.add(currentContig)
+      stream.emitContig(currentContig) // Emit the contig during backtracking
     }
   }
 }
 
-export const dfs = (
-  startingNode: number,
-  edgeMap: Map<number, Edge>,
-  adjacencyMap: Map<number, { from: number; to: number; id: number }[]>,
-  k: number
-): Set<string> => {
-  const contigs = new Set<string>()
-  const visited = new Set<number>()
-  const currentPath: number[] = []
-  const pathSet = new Set<string>()
-
-  travelPath(startingNode, visited, currentPath, '', pathSet, contigs, edgeMap, adjacencyMap, k)
-  return contigs
-}
-
-export const getContigs = (
-  edgesData: Edge[],
-  k: number,
-  self?: Window & typeof globalThis // optionally used for streaming
-): string[] => {
+export const getContigs = (edgesData: Edge[], k: number): ContigStream => {
   const adjacencyMap = new Map<number, { from: number; to: number; id: number }[]>()
 
   edgesData.forEach((edge) => {
@@ -89,21 +69,26 @@ export const getContigs = (
   })
 
   const edgeMap = new Map<number, Edge>(edgesData.map((edge) => [edge.id, edge]))
-  const allContigs = new Set<string>()
+  const stream = new ContigStream()
 
-  adjacencyMap.forEach((_, node) => {
-    const contigs = dfs(node, edgeMap, adjacencyMap, k)
-    self?.postMessage(contigs)
-    contigs.forEach((contig) => allContigs.add(contig))
-  })
-
-  if (self) return []
-  return Array.from(allContigs)
-    .filter((x) => x.length > k)
-    .sort((a, b) => {
-      if (a.length !== b.length) {
-        return b.length - a.length // Sort by length (descending)
-      }
-      return a.localeCompare(b) // Sort lexicographically
+  // Return the stream immediately and start processing asynchronously
+  setTimeout(() => {
+    adjacencyMap.forEach((_, node) => {
+      travelPath(
+        node,
+        new Set<number>(),
+        [],
+        '',
+        new Set<string>(),
+        edgeMap,
+        adjacencyMap,
+        k,
+        stream
+      )
     })
+
+    stream.end() // Signal the end of the stream once all nodes are processed
+  }, 0)
+
+  return stream
 }

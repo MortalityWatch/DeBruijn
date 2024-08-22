@@ -33,8 +33,7 @@ const options = useQuerySync({
 
 let contigWorker: Worker | undefined = undefined
 const updateContigs = () => {
-  stopWorker()
-  startWorker()
+  restartWorker()
   const edgesData = JSON.parse(JSON.stringify(unref(network.value.edgesData)))
   contigWorker?.postMessage({
     edgesData: edgesData,
@@ -45,9 +44,11 @@ const updateContigs = () => {
     if (event.data === 'start') {
       isCalculating.value = true
       contigs.value = []
-    } else if (event.data === 'end') isCalculating.value = false
-    else {
-      let allContigs = [...contigs.value, ...event.data]
+    } else if (event.data === 'end') {
+      isCalculating.value = false
+      console.log('Done')
+    } else {
+      let allContigs = new Set([...contigs.value, ...JSON.parse(event.data)])
       contigs.value = Array.from(allContigs)
         .filter((x) => x.length > options.k.value)
         .sort((a, b) => b.length - a.length)
@@ -55,22 +56,13 @@ const updateContigs = () => {
   }
 }
 
-const startWorker = () => {
+const restartWorker = () => {
+  console.log('(Re-)starting worker...')
+  contigWorker?.terminate()
   contigWorker = new Worker(new URL('../workers/worker.ts', import.meta.url), {
     type: 'module'
   })
 }
-
-const stopWorker = () => {
-  contigWorker?.terminate()
-  contigWorker = undefined
-}
-
-onMounted(() => {
-  if (options.seed.value === -1) {
-    options.seed.value = Math.round(1000 * Math.random())
-  }
-})
 
 const contigs: Ref<string[]> = ref([])
 const network: Ref<NetworkData> = ref({ nodes: [], edges: [], edgesData: [] })
@@ -135,14 +127,17 @@ const parseInput = () => {
   const graph = makeGraph(kmers.value)
   console.log('Making network...')
   network.value = toNetworkData(graph)
-
   console.log('Calculating contigs...')
-
   updateContigs()
-  console.log('Done')
 }
 
-onMounted(() => parseInput())
+onMounted(() => {
+  if (options.seed.value === -1) {
+    options.seed.value = Math.round(1000 * Math.random())
+  } else {
+    parseInput()
+  }
+})
 </script>
 
 <template>

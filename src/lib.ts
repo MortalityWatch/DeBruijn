@@ -207,6 +207,7 @@ export const useQuerySync = <T extends Record<string, QueryParams>>(
 
   const refs = {} as RefOptions<T>
 
+  // Initialize refs with values from the URL if present, otherwise use defaults
   Object.entries(defaultValues).forEach(([key, defaultValue]) => {
     let queryValue = route.query[key as string]
 
@@ -215,59 +216,37 @@ export const useQuerySync = <T extends Record<string, QueryParams>>(
       queryValue = queryValue[0] // Use the first value from the array
     }
 
-    let parsedValue: QueryParams
+    let parsedValue: QueryParams = defaultValue
 
     if (typeof queryValue === 'string') {
       if (!isNaN(Number(queryValue))) {
         parsedValue = Number(queryValue)
       } else if (queryValue === 'true' || queryValue === 'false') {
         parsedValue = queryValue === 'true'
-      } else {
+      } else if (queryValue.trim() !== '') {
         parsedValue = queryValue
       }
-    } else {
-      parsedValue = defaultValue
     }
 
     refs[key as keyof T] = ref(parsedValue) as Ref<T[keyof T]>
   })
 
   const keys = Object.keys(refs)
+
+  // Sync ref values to URL query when they change
   keys.forEach((key) => {
     watch(refs[key], (newVal) => {
-      router.push({ query: { ...route.query, [key as string]: newVal } as LocationQueryRaw })
+      // Only push to the router if the value is valid
+      if (newVal !== undefined && newVal !== null && newVal !== '') {
+        router.push({ query: { ...route.query, [key]: newVal } as LocationQueryRaw })
+      } else {
+        // Remove the key from the query if the value is empty or undefined
+        const remainingQuery = { ...route.query }
+        delete remainingQuery[key]
+        router.push({ query: remainingQuery as LocationQueryRaw })
+      }
     })
   })
-  // Watch for changes in the URL and update the refs accordingly
-  watch(
-    () => route.query,
-    (newQuery) => {
-      keys.forEach((key) => {
-        let queryValue = newQuery[key as string]
-
-        if (Array.isArray(queryValue)) {
-          queryValue = queryValue[0] // Use the first value from the array
-        }
-
-        let parsedValue: QueryParams
-
-        if (typeof queryValue === 'string') {
-          if (!isNaN(Number(queryValue))) {
-            parsedValue = Number(queryValue)
-          } else if (queryValue === 'true' || queryValue === 'false') {
-            parsedValue = queryValue === 'true'
-          } else {
-            parsedValue = queryValue
-          }
-        } else {
-          parsedValue = defaultValues[key as keyof T]
-        }
-
-        refs[key as keyof T].value = parsedValue as T[keyof T]
-      })
-    },
-    { immediate: true }
-  )
 
   return refs
 }
