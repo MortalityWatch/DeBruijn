@@ -4,7 +4,7 @@ import Menubar from 'primevue/menubar'
 const items = [
   { icon: '䷉', label: 'Reads', to: '/' },
   { icon: '🧬', label: 'Genome', to: '/genome' },
-  // { icon: '🧬🧬', label: 'Genomes', to: '/genomes' },
+  { icon: '🧬🧬', label: 'Genomes', to: '/genomes' },
   { icon: '📖', label: 'About', to: '/about' }
 ]
 </script>

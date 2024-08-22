@@ -38,7 +38,7 @@ const kmersString = computed(() => displayArray(kmers.value))
 watch([readsRaw, options.k], () => {
   options.reads.value = readsRaw.value.replace(SEP, NEW_LINE).split(NEW_LINE)
   const shortestRead = shortestReadLength(options.reads.value)
-  if (options.k.value >= shortestRead) options.k.value = Math.max(2, shortestRead)
+  if (options.k.value >= shortestRead) options.k.value = Math.max(3, shortestRead)
   parseInput(options.k.value, kmers.value, network, contigs, isCalculating)
 })
 
@@ -60,7 +60,7 @@ onMounted(() => parseInput(options.k.value, kmers.value, network, contigs, isCal
               >💾 Download FASTA</a
             >
           </div>
-          <NumberSlider title="k-mer size:" v-model:n="options.k.value" :min="2" :max="k_max" />
+          <NumberSlider title="k-mer size:" v-model:n="options.k.value" :min="3" :max="k_max" />
         </template>
       </Card>
     </div>

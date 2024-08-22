@@ -25,7 +25,7 @@ const options = useQuerySync({
   reads: 6,
   noiseReads: 0,
   readLength: 3,
-  seed: 850
+  seed: 73
 })
 
 // State
@@ -54,7 +54,7 @@ const longestContigLength = computed(() =>
 
 watch(options.genome, () => {
   if (options.readLength.value < options.genome.value.length) return
-  options.readLength.value = Math.max(2, options.genome.value.length - 1)
+  options.readLength.value = Math.max(3, options.genome.value.length - 1)
 })
 watch(options.readLength, () => {
   if (options.k.value >= options.genome.value.length) options.k.value = options.readLength.value
@@ -97,16 +97,16 @@ onMounted(() => parseInput(options.k.value, kmers.value, network, contigs, isCal
           <NumberSlider
             title="Read length:"
             v-model:n="options.readLength.value"
-            :min="2"
+            :min="3"
             :max="options.genome.value.length - 1"
           />
           <NumberSlider
             title="k-mer size:"
             v-model:n="options.k.value"
-            :min="2"
+            :min="3"
             :max="options.readLength.value"
           />
-          <NumberSlider title="Seed:" v-model:n="options.seed.value" :min="1" :max="1000" />
+          <NumberSlider title="Seed:" v-model:n="options.seed.value" :min="1" :max="100" />
           <a
             class="dl"
             style="cursor: pointer"
