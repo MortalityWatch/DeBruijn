@@ -19,11 +19,14 @@ import {
 import NumberSlider from '../components/NumberSlider.vue'
 import ProgressSpinner from 'primevue/progressspinner'
 
+const SEP = ' · '
+const NEW_LINE = '\n'
+
 const isCalculating = ref(false)
 const options = useQuerySync({
   inputType: 'reads',
   k: 3,
-  readsRaw: ['AAA', 'AAT', 'ATT', 'TTT', 'TTT', 'TTA'].join('\n'),
+  readsRaw: ['AAA', 'AAT', 'ATT', 'TTT', 'TTT', 'TTA'].join(NEW_LINE),
   genome: 'AAATTTTA',
   reads: 6,
   noiseReads: 0,
@@ -78,10 +81,10 @@ const reads = computed(() => {
         options.seed.value
       )
   } else {
-    return options.readsRaw.value.split('\n').filter((line) => line.trim() !== '')
+    return options.readsRaw.value.split(NEW_LINE).filter((line) => line.trim() !== '')
   }
 })
-const displayArray = (a: string[], sep = ' · ') => a.join(sep)
+const displayArray = (a: string[], sep = SEP) => a.join(sep)
 const kmers = computed(() => readsToKmers(options.k.value, reads.value))
 const k_max = ref(options.readLength.value)
 const readsString = computed(() => displayArray(reads.value))
@@ -95,6 +98,9 @@ watch(options.genome, () => {
   options.readLength.value = Math.max(2, options.genome.value.length - 1)
 })
 watch(options.readsRaw, () => {
+  if (options.readsRaw.value.includes(SEP)) {
+    options.readsRaw.value = options.readsRaw.value.replace(SEP, NEW_LINE)
+  }
   const shortestRead = shortestReadLength(reads.value)
   k_max.value = shortestRead
   if (options.k.value < shortestRead) return
@@ -167,13 +173,21 @@ onMounted(() => {
               🧬 Genome</label
             >
           </div>
-          <Textarea
-            v-if="options.inputType.value === 'reads'"
-            class="textarea"
-            v-model="options.readsRaw.value"
-            rows="7"
-          />
-          <div class="inputTypeGenome" v-if="options.inputType.value === 'genome'">
+          <div class="container">
+            <Textarea
+              v-if="options.inputType.value === 'reads'"
+              class="textarea"
+              v-model="options.readsRaw.value"
+              rows="7"
+            />
+            <a
+              class="dl"
+              style="cursor: pointer"
+              @click="downloadFastaFile(options.readsRaw.value.split(NEW_LINE), 'reads.fa', 'Read')"
+              >💾 Download FASTA</a
+            >
+          </div>
+          <div v-if="options.inputType.value === 'genome'">
             <InputText
               name="genome"
               v-if="options.inputType.value === 'genome'"
@@ -278,7 +292,7 @@ onMounted(() => {
           <div>
             <span v-for="(contig, index) in contigs" :key="index">
               <span :class="{ match: contig === options.genome.value }">{{ contig }}</span>
-              <span v-if="index < contigs.length - 1"> · </span>
+              <span v-if="index < contigs.length - 1">{{ SEP }}</span>
             </span>
           </div>
           <ProgressSpinner v-if="isCalculating" style="width: 50px; height: 50px" />
@@ -405,5 +419,9 @@ onMounted(() => {
 .match {
   color: green;
   font-weight: bold;
+}
+
+.container {
+  margin-bottom: 20px;
 }
 </style>

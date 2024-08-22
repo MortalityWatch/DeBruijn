@@ -238,12 +238,16 @@ export const useQuerySync = <T extends Record<string, QueryParams>>(
     watch(refs[key], (newVal) => {
       // Only push to the router if the value is valid
       if (newVal !== undefined && newVal !== null && newVal !== '') {
-        router.push({ query: { ...route.query, [key]: newVal } as LocationQueryRaw })
+        delay(() => {
+          router.push({ query: { ...route.query, [key]: newVal } as LocationQueryRaw })
+        }, 500)
       } else {
         // Remove the key from the query if the value is empty or undefined
         const remainingQuery = { ...route.query }
         delete remainingQuery[key]
-        router.push({ query: remainingQuery as LocationQueryRaw })
+        delay(() => {
+          router.push({ query: remainingQuery as LocationQueryRaw })
+        }, 500)
       }
     })
   })
