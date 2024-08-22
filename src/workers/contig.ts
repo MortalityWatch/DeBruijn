@@ -14,20 +14,22 @@ const collapse = (seq1: string, seq2: string, k: number): string => seq1 + seq2.
 
 const travelPath = (
   node: number,
+  stream: ContigStream,
   visited: Set<number>,
   currentPath: number[],
   currentContig: string,
-  pathSet: Set<string>,
-  edgeMap: Map<number, Edge>,
-  adjacencyMap: Map<number, { from: number; to: number; id: number }[]>,
-  k: number,
-  stream: ContigStream
+  memo: Set<string>,
+  context: {
+    edgeMap: Map<number, Edge>
+    adjacencyMap: Map<number, { from: number; to: number; id: number }[]>
+    k: number
+  }
 ) => {
-  const outEdges = adjacencyMap.get(node)
+  const outEdges = context.adjacencyMap.get(node)
   if (!outEdges || outEdges.length === 0) {
     const pathString = currentPath.join(',')
-    if (!pathSet.has(pathString)) {
-      pathSet.add(pathString)
+    if (!memo.has(pathString)) {
+      memo.add(pathString)
       stream.emitContig(currentContig) // Emit the contig
     }
     return
@@ -38,13 +40,17 @@ const travelPath = (
 
     const nextContig =
       currentPath.length === 0
-        ? edgeMap.get(edge.id)!.label
-        : collapse(currentContig, edgeMap.get(edge.id)!.label, k)
+        ? context.edgeMap.get(edge.id)!.label
+        : collapse(currentContig, context.edgeMap.get(edge.id)!.label, context.k)
+
+    const pathKey = `${edge.to}-${nextContig}`
+    if (memo.has(pathKey)) continue // Skip this path if it has been visited
+    memo.add(pathKey) // Add this path to the memoization set
 
     visited.add(edge.id)
     currentPath.push(edge.id)
 
-    travelPath(edge.to, visited, currentPath, nextContig, pathSet, edgeMap, adjacencyMap, k, stream)
+    travelPath(edge.to, stream, visited, currentPath, nextContig, memo, context)
 
     visited.delete(edge.id)
     currentPath.pop()
@@ -52,8 +58,8 @@ const travelPath = (
 
   if (currentPath.length > 0) {
     const pathString = currentPath.join(',')
-    if (!pathSet.has(pathString)) {
-      pathSet.add(pathString)
+    if (!memo.has(pathString)) {
+      memo.add(pathString)
       stream.emitContig(currentContig) // Emit the contig during backtracking
     }
   }
@@ -70,21 +76,12 @@ export const getContigs = (edgesData: Edge[], k: number): ContigStream => {
 
   const edgeMap = new Map<number, Edge>(edgesData.map((edge) => [edge.id, edge]))
   const stream = new ContigStream()
+  const context = { edgeMap, adjacencyMap, k }
 
   // Return the stream immediately and start processing asynchronously
   setTimeout(() => {
     adjacencyMap.forEach((_, node) => {
-      travelPath(
-        node,
-        new Set<number>(),
-        [],
-        '',
-        new Set<string>(),
-        edgeMap,
-        adjacencyMap,
-        k,
-        stream
-      )
+      travelPath(node, stream, new Set<number>(), [], '', new Set<string>(), context)
     })
 
     stream.end() // Signal the end of the stream once all nodes are processed
