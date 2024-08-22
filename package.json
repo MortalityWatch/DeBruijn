@@ -14,21 +14,21 @@
     "test:unit": "vitest"
   },
   "dependencies": {
-    "@primevue/themes": "^4.0.2",
+    "@primevue/themes": "^4.0.4",
     "graphlib": "^2.1.8",
     "primeflex": "^3.3.1",
-    "primevue": "^4.0.2",
+    "primevue": "^4.0.4",
     "vis-network": "^9.1.9",
     "vitest": "^2.0.5",
-    "vue": "^3.4.34",
+    "vue": "^3.4.38",
     "vue-router": "^4.4.3"
   },
   "devDependencies": {
     "@rushstack/eslint-patch": "^1.10.4",
     "@tsconfig/node20": "^20.1.4",
     "@types/graphlib": "^2.1.12",
-    "@types/node": "^22.0.0",
-    "@vitejs/plugin-vue": "^5.1.1",
+    "@types/node": "^22.5.0",
+    "@vitejs/plugin-vue": "^5.1.2",
     "@vue/eslint-config-prettier": "^9.0.0",
     "@vue/eslint-config-typescript": "^13.0.0",
     "@vue/tsconfig": "^0.5.1",
@@ -37,7 +37,7 @@
     "npm-run-all2": "^6.2.0",
     "prettier": "^3.2.5",
     "typescript": "^5.5.4",
-    "vite": "^5.3.5",
+    "vite": "^5.4.2",
     "vue-tsc": "^2.0.29"
   }
 }
