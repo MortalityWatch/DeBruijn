@@ -32,6 +32,10 @@ const items = [
       </div>
     </template>
   </RouterView>
+  <p>
+    For demonstration purposes only. No guarantee for correctness. Open Source provided. (c) 2024
+    USMortality
+  </p>
 </template>
 
 <style>
