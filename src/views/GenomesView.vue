@@ -121,7 +121,7 @@ onMounted(() => parseInput(options.k.value, kmers.value, network, contigs, isCal
             title="# of genome reads:"
             v-model:n="options.reads.value"
             :min="0"
-            :max="10"
+            :max="20"
           />
           <NumberSlider
             title="Read length:"

@@ -82,7 +82,8 @@ import Card from 'primevue/card'
       <p>bowtie2-build genome.fa genome</p>
       <p>bowtie2 --no-unal -x genome -fU reads.fa| samtools sort -@ 7 -o temp.bam</p>
       <p>samtools index temp.bam</p>
-
+      <p>samtools view genome.fa | awk '{printf "%-20s %-100s\n", $1, $10}' &&</p>
+      <p>samtools view temp.bam | awk '{printf "%-20s %*s%s\n", $1, $4-1, "", $10}'</p>
       <h2>Open Source</h2>
       <p>
         The full code of this tool can be found at:
